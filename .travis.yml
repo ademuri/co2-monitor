@@ -15,5 +15,5 @@ jobs:
     - install:
       - pip install -U platformio
       - platformio update
-      script: platformio run
+      script: ./ci.sh
       name: "build"
