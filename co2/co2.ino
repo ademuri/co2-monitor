@@ -11,6 +11,7 @@
 #include <MHZ19.h>
 #include <Wire.h>
 #include <WiFi.h>
+#include <esp32-hal-cpu.h>
 
 #include "secrets.h"
 
@@ -46,6 +47,9 @@ void display_co2(int ppm) {
 }
 
 void setup() {
+  // Set the CPU to 80MHz (default 240MHz). This may improve battery life (testing needed).
+  setCpuFrequencyMhz(80);
+
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
   // Note: this LED is inverted
