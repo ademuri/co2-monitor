@@ -20,10 +20,13 @@ static const int16_t kScreenWidth = 128;
 // Sensor refreshes every 5s
 static const uint32_t kLogDelay = 5 * 1000;
 
+// Give up on connecting to wifi after this long
+static const uint32_t kWifiTimeout = 30 * 1000;
+
 MHZ19 sensor;
 Adafruit_SSD1306 display(kScreenWidth, /* height */ 64, &Wire, /* oled reset */ -1);
 AdafruitIO_WiFi io(kIoUsername, kIoKey, kSsid, kSsidPassword);
-AdafruitIO_Feed *feed;
+AdafruitIO_Feed *feed = nullptr;
 
 uint32_t log_at = 0;
 
@@ -78,8 +81,9 @@ void setup() {
 
   // connect to io.adafruit.com
   io.connect();
+  uint32_t give_up_at = millis() + kWifiTimeout;
   // wait for a connection
-  while(io.status() < AIO_CONNECTED) {
+  while(io.status() < AIO_CONNECTED && millis() < give_up_at) {
     static int pos = 0;
     display.clearDisplay();
     display.setCursor(pos % 2 ? 10 : 0, 0);
@@ -89,7 +93,9 @@ void setup() {
     delay(100);
     pos++;
   }
-  feed = io.feed("co2");
+  if (io.status() == AIO_CONNECTED) {
+    feed = io.feed("co2");
+  }
 
   digitalWrite(LED_BUILTIN, HIGH);
 
@@ -111,13 +117,15 @@ void setup() {
 }
 
 void loop() {
-  io.run();
+  if (feed != nullptr) {
+    io.run();
+  }
   int co2 = sensor.getCO2();
 
   display.clearDisplay();
   display_co2(co2);
 
-  if (millis() > log_at) {
+  if (millis() > log_at && feed != nullptr) {
     feed->save(co2);
     log_at = millis() + kLogDelay;
     display.fillCircle(8, 120, 4, SSD1306_WHITE);
@@ -125,5 +133,5 @@ void loop() {
 
   display.display();
 
-  delay(500);
+  delay(kLogDelay + 1);
 }
